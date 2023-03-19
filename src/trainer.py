@@ -9,7 +9,9 @@ import numpy as np
 import albumentations as A
 from src.data_augmentations import *
 import cv2
+import math
 
+import os
 import sys
 sys.path.append('./detr/')
 
@@ -18,6 +20,7 @@ from detr.models.detr import SetCriterion
 '''
 code taken from github repo detr , 'code present in engine.py'
 '''
+IMG_SAVE_DIR = '/Users/anushkafernando/code/vit-example/loss_outputs/'
 
 matcher = HungarianMatcher()
 
@@ -84,6 +87,24 @@ def eval_fn(data_loader, model,criterion, device, weight_dict, BATCH_SIZE):
     
     return summary_loss
 
+def show_validation_score(train_loss_list, valid_loss_list, EPOCHS, save=False, save_dir=IMG_SAVE_DIR, save_name='objectdetection_validation_score.png', FOLD_NUM=1):
+    fig = plt.figure(figsize=(10,10))
+    train_loss = train_loss_list
+    valid_loss = valid_loss_list
+    
+    ax = fig.add_subplot(title= 'losses')
+    ax.plot(range(EPOCHS), train_loss, c='orange', label='train')
+    ax.plot(range(EPOCHS), valid_loss, c='blue', label='valid')
+    ax.set_xlabel('epoch')
+    ax.set_ylabel('loss')
+    ax.legend()
+    
+    plt.tight_layout()
+    if save:
+        os.makedirs(save_dir, exist_ok=True)
+        plt.savefig(save_dir+save_name)
+    else:
+        plt.show()
 
 def run(df_folds, fold, EPOCHS, marking, BATCH_SIZE, num_classes,
                  num_queries, null_class_coef, LR):
@@ -128,14 +149,20 @@ def run(df_folds, fold, EPOCHS, marking, BATCH_SIZE, num_classes,
 
     optimizer = torch.optim.AdamW(model.parameters(), lr=LR)
     
-    best_loss = 10**5
+   
+    train_losses = []
+    valid_losses = []
+
     for epoch in range(EPOCHS):
         train_loss = train_fn(train_data_loader, model,criterion, optimizer,device,scheduler=None, weight_dict=weight_dict, BATCH_SIZE =BATCH_SIZE)
         valid_loss = eval_fn(valid_data_loader, model,criterion, device, weight_dict=weight_dict, BATCH_SIZE=BATCH_SIZE)
         
         print('|EPOCH {}| TRAIN_LOSS {}| VALID_LOSS {}|'.format(epoch+1,train_loss.avg,valid_loss.avg))
-        
-        #if valid_loss.avg < best_loss:
-        #    best_loss = valid_loss.avg
-        #    print('Best model found for Fold {} in Epoch {}........Saving Model'.format(fold,epoch+1))
         torch.save(model.state_dict(), f'detr_{fold}_{epoch+1}.pth')
+        
+        # For visualization
+        train_losses.append(train_loss.avg)
+        valid_losses.append(valid_loss.avg)
+    
+    show_validation_score(train_losses, valid_losses, EPOCHS=EPOCHS)
+    
