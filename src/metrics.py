@@ -29,7 +29,7 @@ def bounding_box_intersection_over_union(box_predicted, box_truth):
 
     # calculate area of the prediction bb and ground-truth bb
     box_predicted_area = (box_predicted[2] - box_predicted[0] + 1) * (box_predicted[3] - box_predicted[1] + 1)
-    
+
     box_truth_area = (box_truth[2] - box_truth[0] + 1) * (box_truth[3] - box_truth[1] + 1)
 
     # calculate intersection over union by taking intersection
